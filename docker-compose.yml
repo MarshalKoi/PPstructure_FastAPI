@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+
+  PaddleOCR:
+    build: . 
+    container_name: ppstructure_fast_api # Custom container name
+    image: ppstructurefastapi:latest # Step 2 customized image name and label
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - OCR_LANGUAGE=en
+    ports:
+    - "8000:8000" # Customize the service exposure port. 8000 is the default port of FastAPI. If you do not modify it, you can only change the previous 8000. Don’t forget the quotation marks.
+    restart: unless-stopped
