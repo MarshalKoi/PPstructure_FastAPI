@@ -59,12 +59,15 @@ async def predict_by_file(file: UploadFile):
         filename_base = os.path.basename(file.filename).split('.')[0]
 
         # Return .docx file as a streaming response
-        return StreamingResponse(
+        return {
+            "file": StreamingResponse(
             docx_bytes,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.docx'},
             status_code=status.HTTP_200_OK
-        )
+            ),
+            "filename": f"{filename_base}.docx"
+        }
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -108,9 +111,12 @@ async def predict_by_url(url: str):
     filename_base = os.path.basename(url).split('.')[0]
 
     # Return .docx file as a streaming response
-    return StreamingResponse(
+    return {
+    "file": StreamingResponse(
         docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={'Content-Disposition': f'attachment; filename={filename_base}.docx'},
         status_code=status.HTTP_200_OK
-    )
+    ),
+    "filename": f"{filename_base}.docx"
+}
