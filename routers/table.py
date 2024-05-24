@@ -73,7 +73,7 @@ async def predict_by_file(file: UploadFile):
             media_type="application/zip",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.zip'},
             status_code=status.HTTP_200_OK
-        ),
+        )
 
 
 @router.post('/predict-by-url', summary="table recognition with URL")
@@ -112,4 +112,4 @@ async def predict_by_url(url: str):
             media_type="application/zip",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.zip'},
             status_code=status.HTTP_200_OK
-        ),
+        )
