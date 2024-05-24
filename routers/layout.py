@@ -62,14 +62,11 @@ async def predict_by_file(file: UploadFile):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Please upload images in .jpg or .png format"
         )
-    return {
-        "file": FileResponse(
+    return FileResponse(
             docx_file_path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.docx'},
             status_code=status.HTTP_200_OK
-        ),
-        "filename": f"{filename_base}.docx"
-    }
+        )
 
 
 @router.post('/predict-by-url', summary="Layout recognition with URL")
@@ -100,15 +97,12 @@ async def predict_by_url(url: str):
                 detail="Failed to create .docx file"
             )
 
-        return {
-            "file": FileResponse(
+        return FileResponse(
             docx_file_path, 
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.docx'},
             status_code=status.HTTP_200_OK
         ),
-            "filename": f"{filename_base}.docx"
-        }
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

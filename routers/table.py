@@ -68,15 +68,12 @@ async def predict_by_file(file: UploadFile):
         for file in xlsx_files:
             zipf.write(file, os.path.basename(file))
 
-    return {
-        "file": FileResponse(
+    return FileResponse(
             zip_file_path, 
             media_type="application/zip",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.zip'},
             status_code=status.HTTP_200_OK
         ),
-        "filename": f"{filename_base}.zip"
-    }
 
 
 @router.post('/predict-by-url', summary="table recognition with URL")
@@ -110,12 +107,9 @@ async def predict_by_url(url: str):
         for file in xlsx_files:
             zipf.write(file, os.path.basename(file))
 
-    return {
-        "file": FileResponse(
+    return FileResponse(
             zip_file_path, 
             media_type="application/zip",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.zip'},
             status_code=status.HTTP_200_OK
         ),
-        "filename": f"{filename_base}.zip"
-    }
