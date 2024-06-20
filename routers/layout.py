@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, UploadFile, status, BackgroundTasks
 from fastapi.responses import FileResponse
 from models.OCRModel import *
 from models.RestfulModel import *
@@ -12,6 +12,7 @@ import os
 import numpy as np
 import cv2
 from docx import Document
+import shutil
 
 OCR_LANGUAGE = os.environ.get("OCR_LANGUAGE", "en")
 
@@ -19,26 +20,36 @@ router = APIRouter(prefix="/layout", tags=["layout"])
 
 layout = PPStructure(recovery=True, lang=OCR_LANGUAGE)
 
+def clear_temp_folder(folder_path):
+    """
+    Clears all files and folders within the specified folder path.
+    """
+    try:
+        if os.path.exists(folder_path):  # Check if the folder exists
+            shutil.rmtree(folder_path)
+        os.makedirs(folder_path)  # Recreate the temp folder after clearing
+    except Exception as e:
+        print(f'Failed to clear {folder_path}. Reason: {e}')
 
-@router.get('/predict-by-path', response_model=RestfulModel, summary="Layout recognition with local images by path")
-def predict_by_path(image_path: str):
-    result = layout(image_path)
-    restfulModel = RestfulModel(
-        resultcode=200, message="Success", data=result, cls=LayoutModel)
-    return restfulModel
+# @router.get('/predict-by-path', response_model=RestfulModel, summary="Layout recognition with local images by path")
+# def predict_by_path(image_path: str):
+#     result = layout(image_path)
+#     restfulModel = RestfulModel(
+#         resultcode=200, message="Success", data=result, cls=LayoutModel)
+#     return restfulModel
 
 
-@router.post('/predict-by-base64', response_model=RestfulModel, summary="Layout recognition with base64 data")
-def predict_by_base64(base64model: Base64PostModel):
-    img = base64_to_ndarray(base64model.base64_str)
-    result = layout(img)
-    restfulModel = RestfulModel(
-        resultcode=200, message="Success", data=result, cls=LayoutModel)
-    return restfulModel
+# @router.post('/predict-by-base64', response_model=RestfulModel, summary="Layout recognition with base64 data")
+# def predict_by_base64(base64model: Base64PostModel):
+#     img = base64_to_ndarray(base64model.base64_str)
+#     result = layout(img)
+#     restfulModel = RestfulModel(
+#         resultcode=200, message="Success", data=result, cls=LayoutModel)
+#     return restfulModel
 
 
 @router.post('/predict-by-file', summary="Layout recognition with uploaded files")
-async def predict_by_file(file: UploadFile):
+async def predict_by_file(file: UploadFile, background_tasks: BackgroundTasks):
     if file.filename.endswith((".jpg", ".png")):  # Only handle common format images
         save_folder = './temp'  # Change the save folder to './temp'
         filename_base = os.path.basename(file.filename).split('.')[0]
@@ -62,24 +73,26 @@ async def predict_by_file(file: UploadFile):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Please upload images in .jpg or .png format"
         )
-    return FileResponse(
+    response = FileResponse(
             docx_file_path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.docx'},
             status_code=status.HTTP_200_OK
         )
+    background_tasks.add_task(clear_temp_folder, './temp')
+    return response
 
 
 @router.post('/predict-by-url', summary="Layout recognition with URL")
-async def predict_by_url(url: str):
+async def predict_by_url(url: str, background_tasks: BackgroundTasks):
     if url.endswith((".jpg", ".png")):  # Only handle common format images
         save_folder = './temp'  # Change the save folder to './temp'
         filename_base = os.path.basename(url).split('.')[0]
         temp_img_path = os.path.join(save_folder, filename_base + '.png')
 
         # Download the image from the URL and save it to a temporary location
-        response = requests.get(url)
+        urlresponse = requests.get(url)
         with open(temp_img_path, 'wb') as buffer:
-            buffer.write(response.content)
+            buffer.write(urlresponse.content)
 
         img = cv2.imread(temp_img_path)  # Read the image from the temporary location
         result = layout(img)
@@ -97,12 +110,14 @@ async def predict_by_url(url: str):
                 detail="Failed to create .docx file"
             )
 
-        return FileResponse(
+        response = FileResponse(
             docx_file_path, 
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={'Content-Disposition': f'attachment; filename={filename_base}.docx'},
             status_code=status.HTTP_200_OK
         )
+        background_tasks.add_task(clear_temp_folder, './temp')
+        return response
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

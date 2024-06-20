@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 FastAPI
 paddlepaddle
 paddleocr
@@ -7,3 +8,6 @@ requests
 numpy
 opencv-python
 python-docx
+ultralytics
+onnx
+onnxruntime

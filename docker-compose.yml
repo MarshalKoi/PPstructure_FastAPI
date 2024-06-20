@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
 
@@ -9,6 +9,7 @@ services:
     environment:
       - TZ=Asia/Ho_Chi_Minh
       - OCR_LANGUAGE=en
+      - KMP_DUPLICATE_LIB_OK=TRUE
     ports:
-    - "8000:8000" # Customize the service exposure port. 8000 is the default port of FastAPI. If you do not modify it, you can only change the previous 8000. Don’t forget the quotation marks.
+    - "8000:8000" # Customize the service exposure port. 8000 is the default port of FastAPI. If you do not modify FastAPI, you can only change the previous 8000.
     restart: unless-stopped

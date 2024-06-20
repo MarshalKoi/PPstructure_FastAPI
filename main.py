@@ -25,8 +25,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+app.include_router(table.router)
 app.include_router(layout.router)
 app.include_router(ocr.router)
-app.include_router(table.router)
 
 # uvicorn.run(app=app, host="0.0.0.0", port=8000)
