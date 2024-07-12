@@ -52,6 +52,12 @@ def table_detection(image_path, save_folder, base_filename):
     results = model(image_path, classes=[8])
     boxes = results[0].boxes.xyxy.tolist()
 
+    if not boxes:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Table found in image"
+        )
+
     # Process each detected object sequentially
     for i, box in enumerate(boxes, start=1):
         x1, y1, x2, y2 = map(int, box)

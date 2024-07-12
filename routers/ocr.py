@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from models.OCRModel import *
 from models.RestfulModel import *
 from paddleocr import PaddleOCR
+from ultralytics import YOLO 
 from utils.ImageHelper import base64_to_ndarray, bytes_to_ndarray
 import requests
 import os
@@ -16,6 +17,7 @@ OCR_LANGUAGE = os.environ.get("OCR_LANGUAGE", "en")
 
 router = APIRouter(prefix="/ocr", tags=["OCR"])
 
+model = YOLO('models/yolov8n-layout.onnx', task='detect')
 ocr = PaddleOCR(use_angle_cls=True, lang=OCR_LANGUAGE)
 
 def clear_temp_folder(folder_path):
@@ -29,6 +31,18 @@ def clear_temp_folder(folder_path):
     except Exception as e:
         print(f'Failed to clear {folder_path}. Reason: {e}')
 
+def text_detection(image_path):
+    # Perform object detection
+    results = model(image_path, classes=[8, 9])  # Assuming classes 8 and 9 are for tables and text
+    boxes = results[0].boxes.xyxy.tolist()
+
+    if not boxes:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Table or text found in image"
+        )
+    
+    return boxes
 
 # @router.get('/predict-by-path', response_model=RestfulModel, summary="Identify local images by path")
 # def predict_by_path(image_path: str):
@@ -102,6 +116,17 @@ async def predict_by_url(url: str, background_tasks: BackgroundTasks):
         )
 
     file_data = urlresponse.content
+
+    # Save the image to a temporary location
+    save_folder = './temp'
+    filename_base = os.path.basename(url).split('.')[0]
+    temp_img_path = os.path.join(save_folder, filename_base + '.png')
+    with open(temp_img_path, 'wb') as buffer:
+        buffer.write(file_data)
+
+    # Apply text detection
+    text_detection(temp_img_path)
+    
     result = ocr.ocr(file_data, cls=True)  # Perform OCR on the image data
 
     # Convert OCR results to .docx

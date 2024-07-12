@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, status, BackgroundTask
 from fastapi.responses import FileResponse
 from models.OCRModel import *
 from models.RestfulModel import *
+from ultralytics import YOLO 
 from paddleocr import PPStructure, save_structure_res
 from paddleocr.ppstructure.recovery.recovery_to_doc import sorted_layout_boxes, convert_info_docx
 from utils.ImageHelper import base64_to_ndarray, bytes_to_ndarray
@@ -18,6 +19,7 @@ OCR_LANGUAGE = os.environ.get("OCR_LANGUAGE", "en")
 
 router = APIRouter(prefix="/layout", tags=["layout"])
 
+model = YOLO('models/yolov8n-layout.onnx', task='detect')
 layout = PPStructure(recovery=True, lang=OCR_LANGUAGE)
 
 def clear_temp_folder(folder_path):
@@ -30,6 +32,19 @@ def clear_temp_folder(folder_path):
         os.makedirs(folder_path)  # Recreate the temp folder after clearing
     except Exception as e:
         print(f'Failed to clear {folder_path}. Reason: {e}')
+
+def text_detection(image_path):
+    # Perform object detection
+    results = model(image_path, classes=[8, 9])  # Assuming classes 8 and 9 are for tables and text
+    boxes = results[0].boxes.xyxy.tolist()
+
+    if not boxes:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Table or text found in image"
+        )
+    
+    return boxes
 
 # @router.get('/predict-by-path', response_model=RestfulModel, summary="Layout recognition with local images by path")
 # def predict_by_path(image_path: str):
@@ -94,6 +109,9 @@ async def predict_by_url(url: str, background_tasks: BackgroundTasks):
         with open(temp_img_path, 'wb') as buffer:
             buffer.write(urlresponse.content)
 
+        # Apply text detection
+        text_detection(temp_img_path)
+        
         img = cv2.imread(temp_img_path)  # Read the image from the temporary location
         result = layout(img)
 
